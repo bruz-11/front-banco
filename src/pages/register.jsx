@@ -1,7 +1,15 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import { CognitoUserPool, CognitoUserAttribute } from 'amazon-cognito-identity-js';
 import api from '../api';
 import './Auth.css';
+
+// Configuramos tu User Pool de AWS Cognito
+const poolData = {
+    UserPoolId: 'us-east-1_uyCELHdgp',
+    ClientId: '91nln9bvj99r9oa5s6tc8ppud'
+};
+const userPool = new CognitoUserPool(poolData);
 
 export default function Register() {
     const [formData, setFormData] = useState({ nombre: '', rut: '', gmail: '', password: '' });
@@ -12,17 +20,32 @@ export default function Register() {
         setFormData({ ...formData, [e.target.name]: e.target.value });
     };
 
-    const handleRegister = async (e) => {
+    const handleRegister = (e) => {
         e.preventDefault();
-        try {
-            const { data } = await api.post('/register', formData);
-            localStorage.setItem('token', data.token);
-            localStorage.setItem('idUsuario', data.idUsuario);
-            navigate(`/dashboard/${data.idUsuario}`);
-        } catch (err) {
-            console.error(err);
-            setError('Error al registrar. Revisa los datos.');
-        }
+        setError('');
+
+        const attributeList = [
+            new CognitoUserAttribute({ Name: 'email', Value: formData.gmail })
+        ];
+
+        // 1. Registramos las credenciales directamente en AWS Cognito
+        userPool.signUp(formData.gmail, formData.password, attributeList, null, async (err, result) => {
+            if (err) {
+                console.error(err);
+                setError('Error en Cognito: ' + (err.message || 'Error desconocido'));
+                return;
+            }
+
+            // 2. Si Cognito lo aprueba, enviamos los datos de perfil a tu backend en Spring Boot
+            try {
+                await api.post('/register', formData);
+                alert('Registro exitoso en la nube. Por favor, inicia sesión.');
+                navigate('/');
+            } catch (backendErr) {
+                console.error(backendErr);
+                setError('Registrado en Cognito, pero hubo un error al guardar en la base de datos.');
+            }
+        });
     };
 
     return (
@@ -32,7 +55,7 @@ export default function Register() {
                     <span className="logo-icon">☁️</span>
                     <h1>Banco Cloud</h1>
                 </div>
-                <p className="auth-subtitle">Crea tu cuenta</p>
+                <p className="auth-subtitle">Crea tu cuenta segura</p>
 
                 {error && <p className="auth-error">{error}</p>}
 

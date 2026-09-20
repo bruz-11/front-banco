@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import api from '../api'; // <-- IMPORTANTE: Usamos tu instancia configurada, no axios
 import './AgregarContacto.css';
 
 const AgregarContacto = () => {
@@ -19,16 +19,12 @@ const AgregarContacto = () => {
         e.preventDefault();
         setError('');
         setUsuarioEncontrado(null);
-
-        const token = localStorage.getItem('token');
         setBuscando(true);
 
         try {
             const params = esGmail ? { gmail: busqueda.trim() } : { rut: busqueda.trim() };
-            const { data } = await axios.get('http://localhost:3000/api/bff/usuarios/buscar', {
-                headers: { Authorization: `Bearer ${token}` },
-                params
-            });
+            // El token y la URL base (https://414l...) se añaden automáticamente por api.js
+            const { data } = await api.get('/usuarios/buscar', { params });
             setUsuarioEncontrado(data);
         } catch (err) {
             console.error('Error al buscar usuario:', err);
@@ -41,16 +37,14 @@ const AgregarContacto = () => {
     const guardarContacto = async () => {
         setError('');
         setGuardando(true);
-        const token = localStorage.getItem('token');
 
         try {
-            await axios.post('http://localhost:3000/api/bff/contactos', {
+            // Nuevamente, api.js se encarga de la ruta completa y el token
+            await api.post('/contactos', {
                 idUsuario: Number(userId),
                 nombreContacto: usuarioEncontrado.nombre,
                 rut: usuarioEncontrado.rut,
                 gmail: usuarioEncontrado.gmail
-            }, {
-                headers: { Authorization: `Bearer ${token}` }
             });
 
             navigate(`/dashboard/${userId}`);

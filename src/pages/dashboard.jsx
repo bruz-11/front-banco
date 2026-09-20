@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import api from '../api'; // Reemplazamos axios por tu instancia configurada
 import './Dashboard.css';
 
 const Dashboard = () => {
@@ -10,15 +10,8 @@ const Dashboard = () => {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        const token = localStorage.getItem('token');
-        if (!token) {
-            navigate('/');
-            return;
-        }
-
-        axios.get(`http://localhost:3000/api/bff/dashboard/${userId}`, {
-            headers: { Authorization: `Bearer ${token}` }
-        })
+        // api.js ya se encarga de inyectar el token y usar la URL de AWS
+        api.get(`/dashboard/${userId}`)
         .then(res => {
             setDashboardData(res.data);
             setLoading(false);

@@ -1,13 +1,13 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import api from '../api'; // Reemplazamos axios por api
 import './Transferir.css';
 
 const Transferir = () => {
     const { userId } = useParams();
     const navigate = useNavigate();
 
-    const [step, setStep] = useState('contacto'); // 'contacto' | 'monto'
+    const [step, setStep] = useState('contacto');
     const [usuario, setUsuario] = useState(null);
     const [contactos, setContactos] = useState([]);
     const [contactoSeleccionado, setContactoSeleccionado] = useState(null);
@@ -17,15 +17,7 @@ const Transferir = () => {
     const [error, setError] = useState('');
 
     useEffect(() => {
-        const token = localStorage.getItem('token');
-        if (!token) {
-            navigate('/');
-            return;
-        }
-
-        axios.get(`http://localhost:3000/api/bff/dashboard/${userId}`, {
-            headers: { Authorization: `Bearer ${token}` }
-        })
+        api.get(`/dashboard/${userId}`)
         .then(res => {
             setUsuario(res.data.usuario);
             setContactos(res.data.detalles.contactos || []);
@@ -60,18 +52,15 @@ const Transferir = () => {
             return;
         }
 
-        const token = localStorage.getItem('token');
         setEnviando(true);
 
         try {
-            await axios.post('http://localhost:3000/api/bff/transferencias', {
+            await api.post('/transferencias', {
                 idUsuario: Number(userId),
                 rutOrigen: usuario?.rut,
                 idContacto: contactoSeleccionado.idContacto ?? contactoSeleccionado.id,
                 rutDestino: contactoSeleccionado.rut,
                 monto: montoNumerico
-            }, {
-                headers: { Authorization: `Bearer ${token}` }
             });
 
             navigate(`/dashboard/${userId}`);
