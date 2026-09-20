@@ -42,7 +42,7 @@ export default function Login() {
                     
                     // 2. Buscamos el ID real en tu MySQL usando el endpoint del BFF
                     // Usamos la instancia 'api' que ya tienes importada para pasar por el Gateway
-                    const respuesta = await api.get(`/api/bff/usuarios/buscar?gmail=${gmail}`, {
+                    const respuesta = await api.get(`/usuarios/buscar?gmail=${gmail}`, {
                         headers: { Authorization: token }
                     });
                     
