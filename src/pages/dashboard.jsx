@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../api'; // Reemplazamos axios por tu instancia configurada
-import './Dashboard.css';
+import './dashboard.css';
 
 const Dashboard = () => {
     const { userId } = useParams();

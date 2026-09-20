@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../api'; // Reemplazamos axios por api
-import './Transferir.css';
+import './transferir.css';
 
 const Transferir = () => {
     const { userId } = useParams();
