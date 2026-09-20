@@ -34,16 +34,28 @@ export default function Login() {
 
         // 4. Autenticamos directamente contra la nube
         cognitoUser.authenticateUser(authenticationDetails, {
-            onSuccess: (result) => {
-                // Obtenemos el JWT oficial emitido por AWS
-                const token = result.getIdToken().getJwtToken();
-                localStorage.setItem('token', token);
-                
-                // NOTA: Como AWS no conoce tu "idUsuario" de la base de datos MySQL,
-                // temporalmente guardaremos el correo para no romper tu navegación.
-                // Más adelante, podemos crear un endpoint que busque el ID usando este correo.
-                localStorage.setItem('idUsuario', gmail);
-                navigate(`/dashboard/${gmail}`);
+            onSuccess: async (result) => {
+                try {
+                    // 1. Obtenemos el JWT oficial emitido por AWS
+                    const token = result.getIdToken().getJwtToken();
+                    localStorage.setItem('token', token);
+                    
+                    // 2. Buscamos el ID real en tu MySQL usando el endpoint del BFF
+                    // Usamos la instancia 'api' que ya tienes importada para pasar por el Gateway
+                    const respuesta = await api.get(`/api/bff/usuarios/buscar?gmail=${gmail}`, {
+                        headers: { Authorization: token }
+                    });
+                    
+                    const usuarioReal = respuesta.data;
+                    
+                    // 3. Guardamos el ID numérico correcto y navegamos
+                    localStorage.setItem('idUsuario', usuarioReal.id);
+                    navigate(`/dashboard/${usuarioReal.id}`);
+                    
+                } catch (err) {
+                    console.error("Error al buscar el ID en MySQL:", err);
+                    setError("Cognito te aceptó, pero falló la conexión con tu base de datos.");
+                }
             },
             onFailure: (err) => {
                 console.error(err);
