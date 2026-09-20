@@ -36,24 +36,41 @@ export default function Login() {
         cognitoUser.authenticateUser(authenticationDetails, {
             onSuccess: async (result) => {
                 try {
-                    // 1. Obtenemos el JWT oficial emitido por AWS
-                    const token = result.getIdToken().getJwtToken();
-                    localStorage.setItem('token', token);
-                    
-                    // 2. Buscamos el ID real en tu MySQL usando el endpoint del BFF
-                    // Usamos la instancia 'api' que ya tienes importada para pasar por el Gateway
+                    // 1. Obtenemos el JWT oficial emitido por AWS (solo se usa para esta
+                    // primera búsqueda; NO es el token que usaremos para contactos/transferencias)
+                    const cognitoToken = result.getIdToken().getJwtToken();
+
+                    // 2. Buscamos el perfil real en MySQL usando el endpoint del BFF.
+                    // OJO: el campo correcto es "idUsuario", no "id" (así lo devuelve
+                    // la entidad Usuario.java de back-sesion).
                     const respuesta = await api.get(`/usuarios/buscar?gmail=${gmail}`, {
-                        headers: { Authorization: token }
+                        headers: { Authorization: cognitoToken }
                     });
-                    
+
                     const usuarioReal = respuesta.data;
-                    
-                    // 3. Guardamos el ID numérico correcto y navegamos
-                    localStorage.setItem('idUsuario', usuarioReal.id);
-                    navigate(`/dashboard/${usuarioReal.id}`);
-                    
+
+                    // 3. Intercambiamos el token de Cognito por un token INTERNO,
+                    // firmado por back-sesion (JwtService, HS256, subject = RUT).
+                    // Es el único token que back_contacto y back-trans-service
+                    // saben validar (su JwtAuthenticationFilter usa la clave local,
+                    // no las claves públicas de Cognito). Sin este paso, cualquier
+                    // llamada a /contactos o /transferencias fallará silenciosamente.
+                    // Esta llamada pasa por la ruta ANY /{proxy+} del Gateway,
+                    // que SÍ exige el autorizador de Cognito -> hay que mandar
+                    // el token de Cognito aquí explícitamente.
+                    const sesionInterna = await api.post('/session',
+                        { rut: usuarioReal.rut },
+                        { headers: { Authorization: `Bearer ${cognitoToken}` } }
+                    );
+
+                    const { token: tokenInterno } = sesionInterna.data;
+
+                    localStorage.setItem('token', tokenInterno);
+                    localStorage.setItem('idUsuario', usuarioReal.idUsuario);
+                    navigate(`/dashboard/${usuarioReal.idUsuario}`);
+
                 } catch (err) {
-                    console.error("Error al buscar el ID en MySQL:", err);
+                    console.error("Error al iniciar sesión interna:", err);
                     setError("Cognito te aceptó, pero falló la conexión con tu base de datos.");
                 }
             },
